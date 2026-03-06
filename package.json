@@ -1,6 +1,6 @@
 {
   "name": "explain-my-error",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI-powered CLI to explain programming errors with fixes and ELI5 output.",
   "type": "module",
   "bin": {
@@ -10,7 +10,12 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "packageManager": "pnpm@10.30.3",
-  "files": ["dist", "skills/SKILL.md", "README.md", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "skills/SKILL.md",
+    "README.md",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -27,7 +32,14 @@
     "release:major": "pnpm run check && pnpm version major && git push --follow-tags",
     "prepare": "pnpm run build"
   },
-  "keywords": ["cli", "errors", "debugging", "ai", "groq", "agent-skill"],
+  "keywords": [
+    "cli",
+    "errors",
+    "debugging",
+    "ai",
+    "groq",
+    "agent-skill"
+  ],
   "author": "Awais Ali",
   "license": "MIT",
   "repository": {
@@ -57,6 +69,9 @@
     "vitest": "^2.1.8"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild"]
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "esbuild"
+    ]
   }
 }
