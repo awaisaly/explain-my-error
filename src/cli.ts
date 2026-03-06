@@ -1,3 +1,4 @@
+import { access, readFile, writeFile } from "node:fs/promises";
 import { createInterface } from "node:readline/promises";
 import { Command } from "commander";
 import pc from "picocolors";
@@ -44,6 +45,81 @@ async function promptForError(): Promise<string> {
   }
 }
 
+async function upsertEnvVar(filePath: string, key: string, value: string): Promise<void> {
+  let existing = "";
+  try {
+    await access(filePath);
+    existing = await readFile(filePath, "utf8");
+  } catch {
+    existing = "";
+  }
+
+  const envLine = `${key}=${value}`;
+  const keyPattern = new RegExp(`^${key}=.*$`, "m");
+  let nextContent: string;
+
+  if (keyPattern.test(existing)) {
+    nextContent = existing.replace(keyPattern, envLine);
+  } else if (!existing.trim()) {
+    nextContent = `${envLine}\n`;
+  } else {
+    const needsTrailingNewline = !existing.endsWith("\n");
+    nextContent = `${existing}${needsTrailingNewline ? "\n" : ""}${envLine}\n`;
+  }
+
+  await writeFile(filePath, nextContent, "utf8");
+}
+
+async function ensureGroqApiKey(): Promise<boolean> {
+  if (process.env.GROQ_API_KEY?.trim()) {
+    return true;
+  }
+
+  if (!process.stdin.isTTY) {
+    return false;
+  }
+
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  try {
+    logger.warn("GROQ_API_KEY is missing.");
+    logger.info(pc.cyan("Paste your Groq API key to continue."));
+
+    while (true) {
+      const key = (await rl.question(pc.bold(pc.cyan("\n> GROQ_API_KEY: ")))).trim();
+      if (!key) {
+        logger.warn("API key cannot be empty. Please try again.");
+        continue;
+      }
+
+      process.env.GROQ_API_KEY = key;
+
+      const saveAnswer = (
+        await rl.question(pc.dim("Save this key to .env in current directory? (Y/n): "))
+      )
+        .trim()
+        .toLowerCase();
+      const shouldSave = saveAnswer === "" || saveAnswer === "y" || saveAnswer === "yes";
+
+      if (shouldSave) {
+        try {
+          await upsertEnvVar(".env", "GROQ_API_KEY", key);
+          logger.success("Saved GROQ_API_KEY to .env");
+        } catch {
+          logger.warn("Could not save key to .env, but this session will continue.");
+        }
+      }
+
+      return true;
+    }
+  } finally {
+    rl.close();
+  }
+}
+
 type CliLogger = {
   warn(message: string): void;
 };
@@ -53,6 +129,7 @@ type RunCliDeps = {
   readStdin?: () => Promise<string>;
   promptForError?: () => Promise<string>;
   stdinIsTTY?: () => boolean;
+  ensureApiKey?: () => Promise<boolean>;
   log?: CliLogger;
 };
 
@@ -61,6 +138,8 @@ export async function runCli(argv: string[] = process.argv, deps: RunCliDeps = {
   const readStdinFn = deps.readStdin ?? readStdin;
   const promptForErrorFn = deps.promptForError ?? promptForError;
   const stdinIsTTY = deps.stdinIsTTY ?? (() => Boolean(process.stdin.isTTY));
+  const ensureApiKeyFn =
+    deps.ensureApiKey ?? (deps.runExplain ? async () => true : ensureGroqApiKey);
   const log = deps.log ?? logger;
 
   const program = new Command();
@@ -105,6 +184,11 @@ Examples:
       const pipedError = inlineError ? "" : await readStdinFn();
       const promptedError = !inlineError && !pipedError ? await promptForErrorFn() : "";
       const finalError = inlineError || pipedError || promptedError;
+      const hasApiKey = await ensureApiKeyFn();
+      if (!hasApiKey) {
+        log.warn("GROQ_API_KEY is required. Set it and run again.");
+        return;
+      }
       await runExplain(finalError);
     });
 
@@ -120,6 +204,13 @@ Examples:
       log.warn('No input detected. Use: explain-my-error explain "<error message>"');
       return;
     }
+
+    const hasApiKey = await ensureApiKeyFn();
+    if (!hasApiKey) {
+      log.warn("GROQ_API_KEY is required. Set it and run again.");
+      return;
+    }
+
     await runExplain(pipedError);
   });
 

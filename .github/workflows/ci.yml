@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -28,6 +30,40 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Enforce version bump for source changes
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          CHANGED_FILES="$(git diff --name-only "$BASE_SHA...$HEAD_SHA")"
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          SRC_CHANGED="false"
+
+          while IFS= read -r file; do
+            if [[ "$file" == src/* ]]; then
+              SRC_CHANGED="true"
+            fi
+          done <<< "$CHANGED_FILES"
+
+          if [[ "$SRC_CHANGED" == "true" ]]; then
+            BASE_VERSION="$(git show "$BASE_SHA:package.json" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>process.stdout.write(JSON.parse(s).version));')"
+            HEAD_VERSION="$(node -e "process.stdout.write(require('./package.json').version)")"
+
+            echo "Base version: $BASE_VERSION"
+            echo "Head version: $HEAD_VERSION"
+
+            if [[ "$BASE_VERSION" == "$HEAD_VERSION" ]]; then
+              echo "Source files changed but package version was not bumped."
+              echo "Please update package.json version before merging to main."
+              exit 1
+            fi
+          fi
+
+          echo "Version bump guard passed."
 
       - name: Run project checks
         run: pnpm run check

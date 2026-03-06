@@ -28,9 +28,19 @@ Install globally (recommended for CLI usage from anywhere):
 npm i -g explain-my-error
 ```
 
+Then run:
+
+```bash
+explain-my-error --help
+# or
+eme --help
+```
+
 ## Set your API key
 
 Required: `GROQ_API_KEY`
+
+If the key is missing, the CLI will prompt for it interactively and can save it to a local `.env` file.
 
 macOS/Linux (zsh/bash):
 
@@ -42,6 +52,20 @@ Windows PowerShell:
 
 ```powershell
 $env:GROQ_API_KEY="your_groq_api_key"
+```
+
+### Global install note
+
+If you installed globally with `npm i -g explain-my-error`:
+
+- Interactive key setup saves `.env` in your current working directory.
+- For using the CLI from any folder, set `GROQ_API_KEY` in your shell profile.
+
+Persist on macOS/Linux:
+
+```bash
+echo 'export GROQ_API_KEY="your_groq_api_key"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
 ## Usage
