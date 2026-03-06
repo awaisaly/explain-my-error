@@ -28,6 +28,22 @@ Install globally (recommended for CLI usage from anywhere):
 npm i -g explain-my-error
 ```
 
+## Set your API key
+
+Required: `GROQ_API_KEY`
+
+macOS/Linux (zsh/bash):
+
+```bash
+export GROQ_API_KEY="your_groq_api_key"
+```
+
+Windows PowerShell:
+
+```powershell
+$env:GROQ_API_KEY="your_groq_api_key"
+```
+
 ## Usage
 
 ### Interactive mode

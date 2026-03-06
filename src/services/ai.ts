@@ -68,7 +68,20 @@ function normalizeResponseShape(payload: unknown): unknown {
 export async function explainErrorWithAI(errorMessage: string): Promise<ExplainedError> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    throw new Error("Missing GROQ_API_KEY environment variable.");
+    throw new Error(
+      [
+        "Missing GROQ_API_KEY environment variable.",
+        "",
+        "Quick setup:",
+        "  macOS/Linux (zsh/bash):",
+        '    export GROQ_API_KEY="your_groq_api_key"',
+        "",
+        "  Windows PowerShell:",
+        '    $env:GROQ_API_KEY="your_groq_api_key"',
+        "",
+        "Then run the CLI again.",
+      ].join("\n"),
+    );
   }
 
   const prompt =
