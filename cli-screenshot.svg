@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-label="explain-my-error CLI screenshot">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1020" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <style>
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      .muted { fill: #94a3b8; }
+      .text { fill: #e2e8f0; }
+      .cyan { fill: #22d3ee; }
+      .green { fill: #22c55e; }
+      .yellow { fill: #facc15; }
+      .dim { fill: #64748b; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1400" height="900" fill="url(#bg)" />
+  <rect x="70" y="50" width="1260" height="800" rx="16" fill="#020617" stroke="#1e293b" />
+  <rect x="70" y="50" width="1260" height="44" rx="16" fill="#111827" />
+  <circle cx="98" cy="72" r="7" fill="#ef4444" />
+  <circle cx="122" cy="72" r="7" fill="#f59e0b" />
+  <circle cx="146" cy="72" r="7" fill="#22c55e" />
+  <text x="180" y="77" class="mono muted" font-size="16">explain-my-error - terminal</text>
+
+  <text x="95" y="132" class="mono text" font-size="22">$ eme explain "TypeError: Cannot read property 'map' of undefined"</text>
+  <text x="95" y="168" class="mono green" font-size="20">OK: Explanation ready.</text>
+
+  <text x="95" y="214" class="mono cyan" font-size="18">========================================================================</text>
+  <text x="95" y="242" class="mono cyan" font-size="18">| EXPLAIN MY ERROR                                                     |</text>
+  <text x="95" y="270" class="mono dim" font-size="18">| AI powered debugging for humans                                      |</text>
+  <text x="95" y="298" class="mono cyan" font-size="18">========================================================================</text>
+
+  <text x="95" y="340" class="mono yellow" font-size="20">ERROR:</text>
+  <text x="172" y="340" class="mono text" font-size="20">TypeError: Cannot read property 'map' of undefined</text>
+
+  <text x="95" y="384" class="mono cyan" font-size="18">EXPLANATION</text>
+  <text x="95" y="412" class="mono text" font-size="18">This happens when .map() is called on an undefined variable.</text>
+
+  <text x="95" y="456" class="mono cyan" font-size="18">COMMON CAUSES</text>
+  <text x="95" y="484" class="mono text" font-size="18">1. API data not loaded</text>
+  <text x="95" y="512" class="mono text" font-size="18">2. State not initialized</text>
+  <text x="95" y="540" class="mono text" font-size="18">3. Incorrect variable reference</text>
+
+  <text x="95" y="584" class="mono green" font-size="18">FIX</text>
+  <text x="95" y="612" class="mono text" font-size="18">Ensure the array exists before calling map.</text>
+
+  <text x="95" y="656" class="mono cyan" font-size="18">CODE EXAMPLE</text>
+  <text x="95" y="684" class="mono text" font-size="18">const items = data?.items ?? [];</text>
+  <text x="95" y="712" class="mono text" font-size="18">items.map(...)</text>
+
+  <text x="95" y="756" class="mono cyan" font-size="18">ELI5</text>
+  <text x="95" y="784" class="mono text" font-size="18">Your code expected a toy box (array), but the box was empty.</text>
+</svg>
