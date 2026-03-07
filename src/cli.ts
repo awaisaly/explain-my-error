@@ -235,6 +235,11 @@ Input modes:
   3) Pipe from files/commands
      $ cat error.txt | explain-my-error
      $ pnpm run build 2>&1 | eme
+
+Power features:
+  - Context-aware analysis: pass stack traces, code snippets, runtime, and framework.
+  - Structured output: use --json for machine-readable responses.
+  - Auto framework detection: best-effort detection from local package.json.
 `,
     );
 
@@ -252,6 +257,24 @@ Input modes:
     .addHelpText(
       "after",
       `
+Context options:
+  --stack       inline stack trace text
+  --stack-file  file path for stack trace
+  --code        inline code snippet text
+  --code-file   file path for code snippet
+  --runtime     runtime label (default: current Node version)
+  --framework   framework label (auto-detected when possible)
+
+Output modes:
+  default pretty output includes:
+    - likely root cause
+    - 2-3 hypotheses with confidence
+    - ranked fix plans (fast/proper/long-term) with tradeoffs
+    - framework-specific recipes
+    - remediation commands and verify checklist
+
+  --json output includes the same data in machine-readable JSON.
+
 Examples:
   $ explain-my-error explain "SyntaxError: Unexpected token }"
   $ eme explain "Module not found: Can't resolve 'axios'"
