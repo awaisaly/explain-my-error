@@ -12,15 +12,96 @@ type GroqChatResponse = {
 function extractJson(content: string): unknown {
   const trimmed = content.trim();
 
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const match = trimmed.match(/\{[\s\S]*\}/);
-    if (!match) {
-      throw new Error("AI did not return valid JSON.");
+  const tryParse = (input: string): unknown | null => {
+    try {
+      return JSON.parse(input);
+    } catch {
+      return null;
     }
-    return JSON.parse(match[0]);
+  };
+
+  const sanitizeControlCharsInStrings = (input: string): string => {
+    let result = "";
+    let inString = false;
+    let escaping = false;
+
+    for (let i = 0; i < input.length; i += 1) {
+      const ch = input[i];
+
+      if (!inString) {
+        result += ch;
+        if (ch === '"') {
+          inString = true;
+        }
+        continue;
+      }
+
+      if (escaping) {
+        result += ch;
+        escaping = false;
+        continue;
+      }
+
+      if (ch === "\\") {
+        result += ch;
+        escaping = true;
+        continue;
+      }
+
+      if (ch === '"') {
+        result += ch;
+        inString = false;
+        continue;
+      }
+
+      if (ch === "\n") {
+        result += "\\n";
+        continue;
+      }
+      if (ch === "\r") {
+        result += "\\r";
+        continue;
+      }
+      if (ch === "\t") {
+        result += "\\t";
+        continue;
+      }
+
+      const code = ch.charCodeAt(0);
+      if (code < 0x20) {
+        result += `\\u${code.toString(16).padStart(4, "0")}`;
+        continue;
+      }
+
+      result += ch;
+    }
+
+    return result;
+  };
+
+  const direct = tryParse(trimmed);
+  if (direct !== null) {
+    return direct;
   }
+
+  const match = trimmed.match(/\{[\s\S]*\}/);
+  if (!match) {
+    throw new Error("AI did not return valid JSON.");
+  }
+
+  const extracted = match[0];
+  const extractedParsed = tryParse(extracted);
+  if (extractedParsed !== null) {
+    return extractedParsed;
+  }
+
+  const sanitized = sanitizeControlCharsInStrings(extracted);
+  const sanitizedParsed = tryParse(sanitized);
+  if (sanitizedParsed !== null) {
+    return sanitizedParsed;
+  }
+
+  throw new Error("AI did not return valid JSON.");
 }
 
 function stringifyField(value: unknown): string {
