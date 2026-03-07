@@ -1,6 +1,6 @@
-# explain-my-error
-
 ![explain-my-error CLI screenshot](./cli-screenshot.svg)
+
+# explain-my-error
 
 Turn confusing programming errors into clear fixes directly in your terminal.
 
