@@ -1,6 +1,6 @@
 {
   "name": "explain-my-error",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "AI-powered CLI to explain programming errors with fixes and ELI5 output.",
   "type": "module",
   "bin": {
