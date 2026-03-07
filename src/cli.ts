@@ -1,9 +1,21 @@
+import { createRequire } from "node:module";
 import { access, readFile, writeFile } from "node:fs/promises";
 import { createInterface } from "node:readline/promises";
 import { Command } from "commander";
 import pc from "picocolors";
 import { runExplainCommand } from "./commands/explain.js";
 import { logger } from "./utils/logger.js";
+
+const require = createRequire(import.meta.url);
+
+function getCliVersion(): string {
+  try {
+    const pkg = require("../package.json") as { version?: string };
+    return pkg.version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
 
 async function readStdin(): Promise<string> {
   if (process.stdin.isTTY) {
@@ -147,7 +159,7 @@ export async function runCli(argv: string[] = process.argv, deps: RunCliDeps = {
   program
     .name("explain-my-error")
     .description("Explain programming errors with AI")
-    .version("1.0.0")
+    .version(getCliVersion())
     .addHelpText(
       "after",
       `
