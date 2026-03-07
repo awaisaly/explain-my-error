@@ -1,5 +1,5 @@
-import { createRequire } from "node:module";
 import { access, readFile, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { createInterface } from "node:readline/promises";
 import { Command } from "commander";
 import pc from "picocolors";
