@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runCli } from "../src/cli.ts";
+import type { ExplainCommandOptions } from "../src/commands/explain.ts";
 
 describe("CLI", () => {
   it("runs explain subcommand with inline error argument", async () => {
@@ -71,5 +72,37 @@ describe("CLI", () => {
     expect(runCalled).toBe(false);
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toMatch(/No input detected/);
+  });
+
+  it("passes context options and json output mode", async () => {
+    const calls: Array<{ message: string; options?: ExplainCommandOptions }> = [];
+
+    await runCli(
+      [
+        "node",
+        "explain-my-error",
+        "explain",
+        "TypeError: boom",
+        "--json",
+        "--framework",
+        "react",
+        "--runtime",
+        "node 20",
+      ],
+      {
+        runExplain: async (errorMessage, options) => {
+          calls.push({ message: errorMessage, options });
+        },
+        readStdin: async () => "",
+        promptForError: async () => "",
+        stdinIsTTY: () => true,
+      },
+    );
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].message).toBe("TypeError: boom");
+    expect(calls[0].options?.output).toBe("json");
+    expect(calls[0].options?.context?.framework).toBe("react");
+    expect(calls[0].options?.context?.runtime).toBe("node 20");
   });
 });

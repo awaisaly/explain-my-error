@@ -23,7 +23,11 @@ This skill takes a raw programming error string and returns a structured explana
     "error": {
       "type": "string",
       "description": "Programming error message"
-    }
+    },
+    "stack_trace": { "type": "string" },
+    "code_snippet": { "type": "string" },
+    "runtime": { "type": "string" },
+    "framework": { "type": "string" }
   },
   "required": ["error"]
 }
@@ -43,7 +47,26 @@ This skill takes a raw programming error string and returns a structured explana
     },
     "fix": { "type": "string" },
     "code_example": { "type": "string" },
-    "eli5": { "type": "string" }
+    "eli5": { "type": "string" },
+    "likely_root_cause": { "type": "string" },
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "hypothesis": { "type": "string" },
+          "confidence": { "type": "number" },
+          "why": { "type": "string" }
+        }
+      }
+    },
+    "fix_plans": { "type": "array" },
+    "framework_recipes": { "type": "array" },
+    "remediation_blocks": { "type": "array" },
+    "verify_checklist": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
   }
 }
 ```
@@ -57,7 +80,9 @@ This skill takes a raw programming error string and returns a structured explana
 
 ```json
 {
-  "error": "TypeError: Cannot read property 'map' of undefined"
+  "error": "TypeError: Cannot read property 'map' of undefined",
+  "framework": "react",
+  "runtime": "node 20"
 }
 ```
 
@@ -74,6 +99,18 @@ This skill takes a raw programming error string and returns a structured explana
   ],
   "fix": "Ensure the array exists before calling map.",
   "code_example": "const items = data?.items ?? [];\\nitems.map(...)",
-  "eli5": "Your code expected a box of toys (an array), but the toy box was empty."
+  "eli5": "Your code expected a box of toys (an array), but the toy box was empty.",
+  "likely_root_cause": "Component state is undefined before async data arrives.",
+  "hypotheses": [
+    {
+      "hypothesis": "State starts as undefined.",
+      "confidence": 0.82,
+      "why": "Error appears on first render before fetch completes."
+    }
+  ],
+  "fix_plans": [],
+  "framework_recipes": [],
+  "remediation_blocks": [],
+  "verify_checklist": ["Re-run flow and confirm no TypeError occurs."]
 }
 ```

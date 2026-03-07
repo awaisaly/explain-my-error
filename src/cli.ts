@@ -3,7 +3,8 @@ import { createRequire } from "node:module";
 import { createInterface } from "node:readline/promises";
 import { Command } from "commander";
 import pc from "picocolors";
-import { runExplainCommand } from "./commands/explain.js";
+import { type ExplainCommandOptions, runExplainCommand } from "./commands/explain.js";
+import type { ExplainContext } from "./types/error.js";
 import { logger } from "./utils/logger.js";
 
 const require = createRequire(import.meta.url);
@@ -27,6 +28,65 @@ async function readStdin(): Promise<string> {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
   return Buffer.concat(chunks).toString("utf8").trim();
+}
+
+async function safeReadText(filePath: string | undefined): Promise<string | undefined> {
+  if (!filePath) {
+    return undefined;
+  }
+  try {
+    return await readFile(filePath, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+async function detectFrameworkFromPackageJson(): Promise<string | undefined> {
+  try {
+    const raw = await readFile("package.json", "utf8");
+    const pkg = JSON.parse(raw) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
+    if ("next" in deps) return "Next.js";
+    if ("react" in deps) return "React";
+    if ("express" in deps) return "Express";
+    if ("typescript" in deps) return "TypeScript";
+    if ("fastify" in deps) return "Fastify";
+    if ("nestjs" in deps || "@nestjs/core" in deps) return "NestJS";
+  } catch {
+    // Best-effort auto-detection.
+  }
+  return undefined;
+}
+
+type ExplainCliOptions = {
+  json?: boolean;
+  stack?: string;
+  stackFile?: string;
+  code?: string;
+  codeFile?: string;
+  runtime?: string;
+  framework?: string;
+};
+
+async function buildExplainOptions(options: ExplainCliOptions): Promise<ExplainCommandOptions> {
+  const stackFromFile = await safeReadText(options.stackFile);
+  const codeFromFile = await safeReadText(options.codeFile);
+  const detectedFramework = await detectFrameworkFromPackageJson();
+
+  const context: ExplainContext = {
+    stackTrace: options.stack ?? stackFromFile,
+    codeSnippet: options.code ?? codeFromFile,
+    runtime: options.runtime ?? `Node ${process.version}`,
+    framework: options.framework ?? detectedFramework ?? "unknown",
+  };
+
+  return {
+    output: options.json ? "json" : "pretty",
+    context,
+  };
 }
 
 async function promptForError(): Promise<string> {
@@ -137,7 +197,7 @@ type CliLogger = {
 };
 
 type RunCliDeps = {
-  runExplain?: (errorMessage: string) => Promise<void>;
+  runExplain?: (errorMessage: string, options?: ExplainCommandOptions) => Promise<void>;
   readStdin?: () => Promise<string>;
   promptForError?: () => Promise<string>;
   stdinIsTTY?: () => boolean;
@@ -182,6 +242,13 @@ Input modes:
     .command("explain")
     .description("Explain a programming error message")
     .argument("[error...]", "Error message to analyze")
+    .option("--json", "Output structured JSON")
+    .option("--stack <stackTrace>", "Additional stack trace context")
+    .option("--stack-file <path>", "Read stack trace from a file")
+    .option("--code <codeSnippet>", "Additional code snippet context")
+    .option("--code-file <path>", "Read code snippet from a file")
+    .option("--runtime <runtime>", "Runtime context (example: node 20, bun 1.1)")
+    .option("--framework <framework>", "Framework context (example: react, nextjs, express)")
     .addHelpText(
       "after",
       `
@@ -189,25 +256,28 @@ Examples:
   $ explain-my-error explain "SyntaxError: Unexpected token }"
   $ eme explain "Module not found: Can't resolve 'axios'"
   $ cat error.txt | explain-my-error explain
+  $ eme explain "TypeError: Cannot read property 'map' of undefined" --framework react --runtime "node 20"
+  $ eme explain --stack-file ./error.log --code-file ./src/app.ts --json
 `,
     )
-    .action(async (errorParts: string[]) => {
+    .action(async (errorParts: string[], options: ExplainCliOptions) => {
       const inlineError = errorParts.join(" ").trim();
       const pipedError = inlineError ? "" : await readStdinFn();
       const promptedError = !inlineError && !pipedError ? await promptForErrorFn() : "";
       const finalError = inlineError || pipedError || promptedError;
+      const explainOptions = await buildExplainOptions(options);
       const hasApiKey = await ensureApiKeyFn();
       if (!hasApiKey) {
         log.warn("GROQ_API_KEY is required. Set it and run again.");
         return;
       }
-      await runExplain(finalError);
+      await runExplain(finalError, explainOptions);
     });
 
   program.action(async () => {
     if (stdinIsTTY()) {
       const promptedError = await promptForErrorFn();
-      await runExplain(promptedError);
+      await runExplain(promptedError, await buildExplainOptions({}));
       return;
     }
 
@@ -223,7 +293,7 @@ Examples:
       return;
     }
 
-    await runExplain(pipedError);
+    await runExplain(pipedError, await buildExplainOptions({}));
   });
 
   await program.parseAsync(argv);

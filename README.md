@@ -8,6 +8,12 @@ Turn confusing programming errors into clear fixes directly in your terminal.
 
 - A plain-English explanation
 - Common root causes
+- Likely root cause based on context
+- 2-3 alternative hypotheses with confidence
+- Ranked fix plans (fast patch / proper fix / long-term fix)
+- Framework-specific recipes (React/Next.js/Node/Express/TypeScript)
+- Copy-paste remediation commands
+- Verify checklist
 - A practical fix
 - A code example
 - An ELI5 summary
@@ -90,6 +96,26 @@ explain-my-error explain "TypeError: Cannot read property 'map' of undefined"
 eme explain "ReferenceError: x is not defined"
 ```
 
+### Context-aware input
+
+```bash
+eme explain "TypeError: Cannot read property 'map' of undefined" \
+  --framework react \
+  --runtime "node 20" \
+  --stack "at App (src/App.tsx:12:5)" \
+  --code "items.map(item => item.id)"
+```
+
+```bash
+eme explain --stack-file ./error.log --code-file ./src/App.tsx --framework nextjs
+```
+
+### JSON mode
+
+```bash
+eme explain "ReferenceError: x is not defined" --json
+```
+
 ### Piped input
 
 ```bash
@@ -109,6 +135,11 @@ explain-my-error [command]
 Commands:
 
 - `explain [error...]` Explain a programming error
+- `--json` Return structured JSON output
+- `--stack`, `--stack-file` Add stack trace context
+- `--code`, `--code-file` Add code snippet context
+- `--runtime` Add runtime context
+- `--framework` Add framework context
 - `--help` Show CLI help
 - `--version` Show CLI version
 
