@@ -56,4 +56,8 @@ export type ExplainContext = {
   codeSnippet?: string;
   runtime?: string;
   framework?: string;
+  conversationHistory?: Array<{
+    role: "user" | "assistant";
+    content: string;
+  }>;
 };

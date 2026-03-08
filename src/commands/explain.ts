@@ -44,7 +44,7 @@ export async function runExplainCommand(
   errorMessage: string,
   optionsOrDeps: ExplainCommandOptions | RunExplainDeps = { output: "pretty" },
   depsArg: RunExplainDeps = {},
-): Promise<void> {
+): Promise<ExplainedError | null> {
   const options = isDepsObject(optionsOrDeps) ? { output: "pretty" as const } : optionsOrDeps;
   const deps = isDepsObject(optionsOrDeps) ? optionsOrDeps : depsArg;
 
@@ -55,7 +55,7 @@ export async function runExplainCommand(
 
   if (!errorMessage?.trim()) {
     log.warn("Please provide an error message.");
-    return;
+    return null;
   }
 
   const spinner = createSpinner("Analyzing your error...");
@@ -69,9 +69,11 @@ export async function runExplainCommand(
     } else {
       log.info(formatOutput(result));
     }
+    return result;
   } catch (error) {
     spinner.fail("Could not explain this error.");
     const message = error instanceof Error ? error.message : "Unknown error";
     log.error(message);
+    return null;
   }
 }

@@ -117,6 +117,26 @@ async function promptForError(): Promise<string> {
   }
 }
 
+async function promptForFollowUp(): Promise<string> {
+  if (!process.stdin.isTTY) {
+    return "";
+  }
+
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  try {
+    const answer = await rl.question(
+      pc.bold(pc.cyan("\n> Follow-up question (press Enter to finish): ")),
+    );
+    return answer.trim();
+  } finally {
+    rl.close();
+  }
+}
+
 async function upsertEnvVar(filePath: string, key: string, value: string): Promise<void> {
   let existing = "";
   try {
@@ -197,9 +217,13 @@ type CliLogger = {
 };
 
 type RunCliDeps = {
-  runExplain?: (errorMessage: string, options?: ExplainCommandOptions) => Promise<void>;
+  runExplain?: (
+    errorMessage: string,
+    options?: ExplainCommandOptions,
+  ) => Promise<{ title: string; likely_root_cause: string } | null | undefined>;
   readStdin?: () => Promise<string>;
   promptForError?: () => Promise<string>;
+  promptForFollowUp?: () => Promise<string>;
   stdinIsTTY?: () => boolean;
   ensureApiKey?: () => Promise<boolean>;
   log?: CliLogger;
@@ -209,10 +233,47 @@ export async function runCli(argv: string[] = process.argv, deps: RunCliDeps = {
   const runExplain = deps.runExplain ?? runExplainCommand;
   const readStdinFn = deps.readStdin ?? readStdin;
   const promptForErrorFn = deps.promptForError ?? promptForError;
+  const promptForFollowUpFn =
+    deps.promptForFollowUp ?? (deps.runExplain ? async () => "" : promptForFollowUp);
   const stdinIsTTY = deps.stdinIsTTY ?? (() => Boolean(process.stdin.isTTY));
   const ensureApiKeyFn =
     deps.ensureApiKey ?? (deps.runExplain ? async () => true : ensureGroqApiKey);
   const log = deps.log ?? logger;
+
+  async function runInteractiveConversation(
+    baseOptions: ExplainCommandOptions,
+    initialPrompt?: string,
+  ): Promise<void> {
+    const history: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+    let currentPrompt = initialPrompt ?? (await promptForErrorFn());
+    while (currentPrompt) {
+      const result = await runExplain(currentPrompt, {
+        ...baseOptions,
+        context: {
+          ...baseOptions.context,
+          conversationHistory: history,
+        },
+      });
+
+      if (result && typeof result === "object") {
+        const title =
+          "title" in result && typeof result.title === "string" ? result.title : "Analysis";
+        const rootCause =
+          "likely_root_cause" in result && typeof result.likely_root_cause === "string"
+            ? result.likely_root_cause
+            : "No root cause provided.";
+        history.push({ role: "user", content: currentPrompt });
+        history.push({ role: "assistant", content: `${title}. Root cause: ${rootCause}` });
+      }
+
+      const followUp = await promptForFollowUpFn();
+      if (!followUp) {
+        return;
+      }
+      currentPrompt = followUp;
+    }
+  }
 
   const program = new Command();
 
@@ -286,21 +347,43 @@ Examples:
     .action(async (errorParts: string[], options: ExplainCliOptions) => {
       const inlineError = errorParts.join(" ").trim();
       const pipedError = inlineError ? "" : await readStdinFn();
+      let apiKeyAlreadyValidated = false;
+      if (!inlineError && !pipedError && stdinIsTTY()) {
+        const hasApiKey = await ensureApiKeyFn();
+        apiKeyAlreadyValidated = hasApiKey;
+        if (!hasApiKey) {
+          log.warn("GROQ_API_KEY is required. Set it and run again.");
+          return;
+        }
+      }
+
       const promptedError = !inlineError && !pipedError ? await promptForErrorFn() : "";
       const finalError = inlineError || pipedError || promptedError;
       const explainOptions = await buildExplainOptions(options);
-      const hasApiKey = await ensureApiKeyFn();
-      if (!hasApiKey) {
-        log.warn("GROQ_API_KEY is required. Set it and run again.");
+      if (!apiKeyAlreadyValidated) {
+        const hasApiKey = await ensureApiKeyFn();
+        if (!hasApiKey) {
+          log.warn("GROQ_API_KEY is required. Set it and run again.");
+          return;
+        }
+      }
+
+      if (!inlineError && !pipedError && stdinIsTTY()) {
+        await runInteractiveConversation(explainOptions, promptedError);
         return;
       }
+
       await runExplain(finalError, explainOptions);
     });
 
   program.action(async () => {
     if (stdinIsTTY()) {
-      const promptedError = await promptForErrorFn();
-      await runExplain(promptedError, await buildExplainOptions({}));
+      const hasApiKey = await ensureApiKeyFn();
+      if (!hasApiKey) {
+        log.warn("GROQ_API_KEY is required. Set it and run again.");
+        return;
+      }
+      await runInteractiveConversation(await buildExplainOptions({}));
       return;
     }
 

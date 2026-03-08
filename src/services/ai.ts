@@ -371,11 +371,18 @@ Return STRICT JSON only (no markdown) with fields:
 Use provided runtime/framework/code/stack context to produce context-aware likely root cause and framework-specific fixes.`;
 
   const contextBlock = [
-    `Error message:\n${errorMessage}`,
+    `User input:\n${errorMessage}`,
     `Runtime:\n${context.runtime ?? "unknown"}`,
     `Framework:\n${context.framework ?? "unknown"}`,
     `Stack trace:\n${context.stackTrace ?? "not provided"}`,
     `Code snippet:\n${context.codeSnippet ?? "not provided"}`,
+    `Conversation history:\n${
+      context.conversationHistory && context.conversationHistory.length > 0
+        ? context.conversationHistory
+            .map((item) => `${item.role.toUpperCase()}: ${item.content}`)
+            .join("\n")
+        : "not provided"
+    }`,
   ].join("\n\n");
 
   const requestBody = {
